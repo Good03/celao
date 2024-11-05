@@ -6,9 +6,10 @@ import networkx as nx
 def draw_heatmap(correlation_matrix):
     """Draw a heatmap for the correlation matrix."""
     plt.figure(figsize=(10, 8))
-    sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True)
+    sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True, vmin=-1, vmax=1)
     plt.title('Correlation Heatmap')
     plt.show()
+    #TODO doplnit skalu od 1 po -1 a pouzit inu paletu "rocket" alebo "flare"
 
 
 def draw_plot(correlation_matrix):
@@ -30,7 +31,8 @@ def draw_plot(correlation_matrix):
     plt.show()
 
 
-def draw_graph(correlation_matrix, threshold=0.5):
+
+def draw_graph(correlation_matrix, threshold=0.4):
     """Create a graph based on the correlation matrix with a given threshold."""
     G = nx.Graph()
 
@@ -41,7 +43,7 @@ def draw_graph(correlation_matrix, threshold=0.5):
                 G.add_edge(correlation_matrix.index[i], correlation_matrix.columns[j], weight=corr_value)
 
     plt.figure(figsize=(12, 12))
-    pos = nx.spring_layout(G, seed=42, k=1.5)
+    pos = nx.spring_layout(G, seed=42, k=1.5) #TODO circular_layout
     nx.draw_networkx_nodes(G, pos, node_size=700, node_color='lightblue', edgecolors='black')
     nx.draw_networkx_edges(G, pos, width=1.0, alpha=0.5)
     nx.draw_networkx_labels(G, pos, font_size=12)
@@ -53,3 +55,6 @@ def draw_graph(correlation_matrix, threshold=0.5):
     plt.title('Correlation Network Graph', fontsize=20)
     plt.axis('off')
     plt.show()
+    #TODO pouzit inu paletu "rocket" alebo "flare"
+    #TODO spravit bar
+    #TODO spustit funkciu ktora bude hladat vsetku kompletne podgrafy grafy (2<=n<=6) kazdu velkost na osobytny obrazok

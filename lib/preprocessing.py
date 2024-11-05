@@ -1,14 +1,14 @@
 import pandas as pd
 
 # Path to the dataset
-dataset_path = 'data/abalone.data'
+dataset_path = 'data/iris.data'
 
 def load_dataset():
     """Load dataset and return a DataFrame."""
-    # Load data with pandas
     data_frame = pd.read_csv(dataset_path)
-    # pd.set_option('display.max_columns', None)
-    # pd.set_option('display.max_rows', None)
+    #TODO
+    pd.set_option('display.max_columns', None) # If you want to see full columns uncomment this line
+    # pd.set_option('display.max_rows', None) # If you want to see full rows uncomment this line
 
     # Display the first 10 rows to check the data
     print("=======================================Loaded Data===================================================")
