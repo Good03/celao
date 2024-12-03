@@ -22,7 +22,7 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
     # Set diagonal elements of the correlation matrix to 0
     np.fill_diagonal(correlation_matrix.values, 0)
 
-    # # Replace values outside +/- sigma interval with 0
+    # Replace values outside +/- sigma interval with 0
     filtered_correlation = np.where(
         (correlation_matrix > sigma) | (correlation_matrix < -sigma),
         correlation_matrix,

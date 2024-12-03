@@ -3,6 +3,7 @@ import itertools
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
+import matplotlib.cm as cm
 from matplotlib.patches import Rectangle
 
 
@@ -37,49 +38,33 @@ def draw_plot(correlation_matrix):
     plt.show()
 
 
-def find_edge_point(x1, y1, x2, y2, node_width, node_height):
-    """Find the intersection point of a line with a rectangle's boundary."""
-    dx = x2 - x1
-    dy = y2 - y1
-    aspect_ratio = node_height / node_width
-
-    # Adjusted to compute intersection with the rectangle's perimeter
-    if abs(dy / (dx + 1e-9)) > aspect_ratio:  # Line intersects top/bottom
-        if dy > 0:  # Top
-            y = y1 + node_height / 2
-            x = x1 + dx * (node_height / 2) / dy
-        else:  # Bottom
-            y = y1 - node_height / 2
-            x = x1 - dx * (node_height / 2) / dy
-    else:  # Line intersects left/right
-        if dx > 0:  # Right
-            x = x1 + node_width / 2
-            y = y1 + dy * (node_width / 2) / dx
-        else:  # Left
-            x = x1 - node_width / 2
-            y = y1 - dy * (node_width / 2) / dx
-
-    return x, y
-
 def draw_rectangular_nodes(ax, pos, node_width, node_height):
-    """Draw rectangular nodes on the provided axis."""
-    for node, (x, y) in pos.items():
-        rect = Rectangle((x - node_width / 2, y - node_height / 2), node_width, node_height, color='lightpink',
-                         ec='white')
-        ax.add_patch(rect)
-        ax.text(x, y, str(node), fontsize=10, ha='center', va='center')
+    """Draw rectangular nodes with custom colors from a colormap."""
+    num_nodes = len(pos)
+    cmap = cm.get_cmap('Pastel1', num_nodes)  # Получаем цветовую карту Pastel1
+
+    for i, (node, (x, y)) in enumerate(pos.items()):
+        color = cmap(i)  # Выбираем цвет для текущей вершины
+        ax.text(
+            x, y, str(node),
+            fontsize=10,
+            color='black',
+            fontfamily='sans-serif',
+            ha='center',
+            va='center',
+            bbox=dict(facecolor=color, edgecolor='black', boxstyle='round,pad=0.3')
+        )
 
 
 def draw_edges(ax, pos, G, node_width, node_height):
-    """Draw edges for the graph."""
+    """Draw edges for the graph without calculating intersection points."""
     for edge in G.edges():
         x1, y1 = pos[edge[0]]
         x2, y2 = pos[edge[1]]
-        start_x, start_y = find_edge_point(x1, y1, x2, y2, node_width, node_height)
-        end_x, end_y = find_edge_point(x2, y2, x1, y1, node_width, node_height)
-        weight = G[edge[0]][edge[1]]['weight']  # Get the weight of the edge
+
+        weight = G[edge[0]][edge[1]]['weight']
         linestyle = 'dashed' if weight == 0 else 'solid'
-        ax.plot([start_x, end_x], [start_y, end_y], color='white', alpha=0.7, zorder=1, linestyle=linestyle)
+        ax.plot([x1, x2], [y1, y2], color='black', alpha=0.7, zorder=1, linestyle=linestyle)
 
 
 def draw_edge_labels(ax, pos, G):
@@ -88,8 +73,8 @@ def draw_edge_labels(ax, pos, G):
     edge_labels = {k: f"{v:.2f}" for k, v in edge_labels.items()}
     # Explicitly use the 'pos' for edge label placement
     nx.draw_networkx_edge_labels(
-        G, pos, edge_labels=edge_labels, font_color='red', label_pos=0.65, font_size=10,
-        bbox=dict(facecolor="grey", ec="grey"), ax=ax
+        G, pos, edge_labels=edge_labels, font_color='black', label_pos=0.65, font_size=10,
+        bbox=dict(facecolor="white", ec="white"), ax=ax
     )
 
 
@@ -125,7 +110,7 @@ def draw_graph(correlation_matrix, sigma_value=None, method=None):
     G = create_graph(correlation_matrix)
 
     # Create a canvas with 2 subplots (side by side)
-    fig, axes = plt.subplots(1, 2, figsize=(20, 10), facecolor='grey')
+    fig, axes = plt.subplots(1, 2, figsize=(20, 10), facecolor='white')
 
     # Draw the graph before filtering on the first subplot
     pos = nx.circular_layout(G)
@@ -136,14 +121,13 @@ def draw_graph(correlation_matrix, sigma_value=None, method=None):
     draw_edge_labels(ax, pos, G)
     ax.set_title('Main graph (before filtering)')
     ax.axis('off')
-    if sigma_value:
-        plt.text(1.1, 1.1, f'Method: {method}', fontsize=12, ha='right', va='top',
-                 transform=plt.gca().transAxes, bbox=dict(facecolor='lightgreen', alpha=0.5, edgecolor='black'))
-    if sigma_value:
+    if method:
         plt.text(1.1, 1.05, f'Sigma: {sigma_value:.2f}', fontsize=12, ha='right', va='top',
                  transform=plt.gca().transAxes, bbox=dict(facecolor='lightblue', alpha=0.5, edgecolor='white'))
     # Draw the graph after sigma filtering on the second subplot, if sigma is provided
     if sigma_value:
+        plt.text(1.1, 1.1, f'Method: {method}', fontsize=12, ha='right', va='top',
+                 transform=plt.gca().transAxes, bbox=dict(facecolor='lightgreen', alpha=0.5, edgecolor='black'))
         G_filtered = create_graph(correlation_matrix, sigma_value)
         pos_filtered = nx.circular_layout(G_filtered)
         ax = axes[1]
@@ -157,22 +141,32 @@ def draw_graph(correlation_matrix, sigma_value=None, method=None):
         subgraphs = find_all_subgraphs(G_filtered)
 
         # Create a new figure for subgraphs
-        fig_subgraphs, axes_subgraphs = plt.subplots(1, len(subgraphs), figsize=(20, 10), facecolor='grey')
-        if len(subgraphs) == 1:
-            axes_subgraphs = [axes_subgraphs]  # Make it iterable for a single subgraph
+        subgraph_groups = {}
+        for subgraph in subgraphs:
+            size = len(subgraph.nodes())
+            if size not in subgraph_groups:
+                subgraph_groups[size] = []
+            subgraph_groups[size].append(subgraph)
 
-        for i, subgraph in enumerate(subgraphs):
-            pos_subgraph = nx.spring_layout(subgraph, seed=42)  # Layout for each subgraph
-            ax_subgraph = axes_subgraphs[i]
-            draw_rectangular_nodes(ax_subgraph, pos_subgraph, node_width, node_height)
-            draw_edges(ax_subgraph, pos_subgraph, subgraph, node_width, node_height)
-            draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
-            ax_subgraph.set_title(f'Subgraph {i + 1} with {len(subgraph.nodes)} nodes')
-            ax_subgraph.axis('off')
+        for size, group in subgraph_groups.items():
+            if len(group) < 3:
+                fig_group, axes_group = plt.subplots(1, len(group), figsize=(10, 5), facecolor='white')
+            else:
+                fig_group, axes_group = plt.subplots(1, len(group), figsize=(20, 10), facecolor='white')
+            if len(group) == 1:
+                axes_group = [axes_group]  # Чтобы обеспечить итерабельность
+            for i, subgraph in enumerate(group):
+                pos_subgraph = nx.spring_layout(subgraph, seed=42)
+                ax_subgraph = axes_group[i]
+                draw_rectangular_nodes(ax_subgraph, pos_subgraph, node_width, node_height)
+                draw_edges(ax_subgraph, pos_subgraph, subgraph, node_width, node_height)
+                draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
+                ax_subgraph.set_title(f'Subgraph {i + 1} ({size} nodes)')
+                ax_subgraph.axis('off')
 
-        # Adjust layout to prevent overlap
-        plt.tight_layout()
-        plt.show()
+            plt.suptitle(f'Subgraphs with {size} nodes', fontsize=14)
+            plt.tight_layout()
+            plt.show()
 
 
 
