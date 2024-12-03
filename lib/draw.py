@@ -95,7 +95,7 @@ def find_all_subgraphs(G):
     subgraphs = []
 
     # Check all subsets of nodes of size 2 or more
-    for size in range(3, 5):
+    for size in range(3, 6):
         for subset in itertools.combinations(nodes, size):
             subgraph = G.subgraph(subset)
             if nx.complete_graph(subgraph):
@@ -152,11 +152,11 @@ def draw_graph(correlation_matrix, sigma_value=None, method=None):
             if len(group) < 3:
                 fig_group, axes_group = plt.subplots(1, len(group), figsize=(10, 5), facecolor='white')
             else:
-                fig_group, axes_group = plt.subplots(1, len(group), figsize=(20, 10), facecolor='white')
+                fig_group, axes_group = plt.subplots(1, len(group), figsize=(15, 7), facecolor='white')
             if len(group) == 1:
                 axes_group = [axes_group]  # Чтобы обеспечить итерабельность
             for i, subgraph in enumerate(group):
-                pos_subgraph = nx.spring_layout(subgraph, seed=42)
+                pos_subgraph = nx.spring_layout(subgraph, seed=42, k=0.1, scale=0.1)
                 ax_subgraph = axes_group[i]
                 draw_rectangular_nodes(ax_subgraph, pos_subgraph, node_width, node_height)
                 draw_edges(ax_subgraph, pos_subgraph, subgraph, node_width, node_height)
