@@ -38,7 +38,7 @@ def draw_plot(correlation_matrix):
     plt.show()
 
 
-def draw_rectangular_nodes(ax, pos, node_width, node_height):
+def draw_rectangular_nodes(ax, pos):
     """Draw rectangular nodes with custom colors from a colormap."""
     num_nodes = len(pos)
     cmap = cm.get_cmap('Pastel1', num_nodes)  # Получаем цветовую карту Pastel1
@@ -56,7 +56,7 @@ def draw_rectangular_nodes(ax, pos, node_width, node_height):
         )
 
 
-def draw_edges(ax, pos, G, node_width, node_height):
+def draw_edges(ax, pos, G):
     """Draw edges for the graph without calculating intersection points."""
     for edge in G.edges():
         x1, y1 = pos[edge[0]]
@@ -90,55 +90,56 @@ def create_graph(correlation_matrix, sigma_value=None):
 
 
 def find_all_subgraphs(G):
-    """Find all possible complete subgraphs (cliques) of size >= 2."""
+    """Find all possible complete subgraphs (cliques) of size >= 3."""
     nodes = list(G.nodes())
     subgraphs = []
 
-    # Check all subsets of nodes of size 2 or more
+    # Check all subsets of nodes of size 3 or more
     for size in range(3, 6):
         for subset in itertools.combinations(nodes, size):
             subgraph = G.subgraph(subset)
-            if nx.complete_graph(subgraph):
+            # Check if the subgraph is a complete graph
+            if subgraph.number_of_edges() == size * (size - 1) / 2:
                 subgraphs.append(subgraph)
 
     return subgraphs
 
 
-def draw_graph(correlation_matrix, sigma_value=None, method=None):
-    """Main function to draw graphs before and after applying sigma filtering."""
-    # Create the graph before filtering
+def draw_graph(correlation_matrix, sigma_value=None, methodOfCorrelation=None, methodOfEncoding=None):
     G = create_graph(correlation_matrix)
 
-    # Create a canvas with 2 subplots (side by side)
+    print("Drawing main graph")
+    print(f"Nodes in G: {G.nodes()}")
+    print(f"Edges in G: {G.edges()}")
+
     fig, axes = plt.subplots(1, 2, figsize=(20, 10), facecolor='white')
 
-    # Draw the graph before filtering on the first subplot
     pos = nx.circular_layout(G)
     ax = axes[0]
-    node_width, node_height = 0.25, 0.1
-    draw_rectangular_nodes(ax, pos, node_width, node_height)
-    draw_edges(ax, pos, G, node_width, node_height)
+    draw_rectangular_nodes(ax, pos)
+    draw_edges(ax, pos, G)
     draw_edge_labels(ax, pos, G)
     ax.set_title('Main graph (before filtering)')
     ax.axis('off')
-    if method:
-        plt.text(1.1, 1.05, f'Sigma: {sigma_value:.2f}', fontsize=12, ha='right', va='top',
-                 transform=plt.gca().transAxes, bbox=dict(facecolor='lightblue', alpha=0.5, edgecolor='white'))
-    # Draw the graph after sigma filtering on the second subplot, if sigma is provided
+
     if sigma_value:
-        plt.text(1.1, 1.1, f'Method: {method}', fontsize=12, ha='right', va='top',
-                 transform=plt.gca().transAxes, bbox=dict(facecolor='lightgreen', alpha=0.5, edgecolor='black'))
         G_filtered = create_graph(correlation_matrix, sigma_value)
+        print("Drawing filtered graph")
+        print(f"Nodes in G_filtered: {G_filtered.nodes()}")
+        print(f"Edges in G_filtered: {G_filtered.edges()}")
+
         pos_filtered = nx.circular_layout(G_filtered)
         ax = axes[1]
-        draw_rectangular_nodes(ax, pos_filtered, node_width, node_height)
-        draw_edges(ax, pos_filtered, G_filtered, node_width, node_height)
+        draw_rectangular_nodes(ax, pos_filtered)
+        draw_edges(ax, pos_filtered, G_filtered)
         draw_edge_labels(ax, pos_filtered, G_filtered)
         ax.set_title(f'Main graph (after filtering by sigma = {sigma_value:.2f})')
         ax.axis('off')
 
-        # Find all complete subgraphs (cliques) in the filtered graph
         subgraphs = find_all_subgraphs(G_filtered)
+        print(f"Found {len(subgraphs)} complete subgraphs")
+
+        plt.show()
 
         # Create a new figure for subgraphs
         subgraph_groups = {}
@@ -158,8 +159,8 @@ def draw_graph(correlation_matrix, sigma_value=None, method=None):
             for i, subgraph in enumerate(group):
                 pos_subgraph = nx.spring_layout(subgraph, seed=42, k=0.1, scale=0.1)
                 ax_subgraph = axes_group[i]
-                draw_rectangular_nodes(ax_subgraph, pos_subgraph, node_width, node_height)
-                draw_edges(ax_subgraph, pos_subgraph, subgraph, node_width, node_height)
+                draw_rectangular_nodes(ax_subgraph, pos_subgraph)
+                draw_edges(ax_subgraph, pos_subgraph, subgraph)
                 draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
                 ax_subgraph.set_title(f'Subgraph {i + 1} ({size} nodes)')
                 ax_subgraph.axis('off')
