@@ -1,5 +1,3 @@
-from shutil import which
-
 from lib.preprocessing import *
 from lib.correlation_methods import *
 from lib.draw import draw_graph

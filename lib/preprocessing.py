@@ -80,3 +80,10 @@ def select_correlation_method():
         except ValueError:
             print("Incorrect number. Try again.")
 
+def choose_alpha_value():
+    choice = input("Do you want to add alpha value to sigma?(y/n)").lower()
+    if choice == "y":
+        alpha = float(input("Choose alpha value: "))
+    else:
+        alpha = 0
+    return alpha

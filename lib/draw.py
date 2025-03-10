@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 import matplotlib.cm as cm
-from matplotlib.patches import Rectangle
 
 
 def draw_heatmap(correlation_matrix, sigma_value=None):
@@ -105,7 +104,7 @@ def find_all_subgraphs(G):
     return subgraphs
 
 
-def draw_graph(correlation_matrix, sigma_value=None, methodOfCorrelation=None, methodOfEncoding=None):
+def draw_graph(correlation_matrix, sigma_value=None):
     G = create_graph(correlation_matrix)
 
     print("Drawing main graph")
@@ -157,7 +156,7 @@ def draw_graph(correlation_matrix, sigma_value=None, methodOfCorrelation=None, m
             if len(group) == 1:
                 axes_group = [axes_group]  # Чтобы обеспечить итерабельность
             for i, subgraph in enumerate(group):
-                pos_subgraph = nx.spring_layout(subgraph, seed=42, k=0.1, scale=0.1)
+                pos_subgraph = nx.spring_layout(subgraph, seed=1, k=1, scale=1)
                 ax_subgraph = axes_group[i]
                 draw_rectangular_nodes(ax_subgraph, pos_subgraph)
                 draw_edges(ax_subgraph, pos_subgraph, subgraph)
