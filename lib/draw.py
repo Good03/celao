@@ -1,4 +1,5 @@
 import itertools
+import math
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -43,9 +44,10 @@ def draw_rectangular_nodes(ax, pos):
     cmap = cm.get_cmap('Pastel1', num_nodes)  # Получаем цветовую карту Pastel1
 
     for i, (node, (x, y)) in enumerate(pos.items()):
-        color = cmap(i)  # Выбираем цвет для текущей вершины
+        color = cmap(i)
+        node_text = str(node).replace(" ", "\n")# Выбираем цвет для текущей вершины
         ax.text(
-            x, y, str(node),
+            x, y, str(node_text),
             fontsize=10,
             color='black',
             fontfamily='sans-serif',
@@ -72,7 +74,7 @@ def draw_edge_labels(ax, pos, G):
     edge_labels = {k: f"{v:.2f}" for k, v in edge_labels.items()}
     # Explicitly use the 'pos' for edge label placement
     nx.draw_networkx_edge_labels(
-        G, pos, edge_labels=edge_labels, font_color='black', label_pos=0.65, font_size=10,
+        G, pos, edge_labels=edge_labels, font_color='black', label_pos=0.65, font_size=7,
         bbox=dict(facecolor="white", ec="white"), ax=ax
     )
 
@@ -94,7 +96,7 @@ def find_all_subgraphs(G):
     subgraphs = []
 
     # Check all subsets of nodes of size 3 or more
-    for size in range(3, 6):
+    for size in range(3, 7):
         for subset in itertools.combinations(nodes, size):
             subgraph = G.subgraph(subset)
             # Check if the subgraph is a complete graph
@@ -104,7 +106,7 @@ def find_all_subgraphs(G):
     return subgraphs
 
 
-def draw_graph(correlation_matrix, sigma_value=None):
+def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, encoding_method=None, dataset_name=None):
     G = create_graph(correlation_matrix)
 
     print("Drawing main graph")
@@ -118,7 +120,7 @@ def draw_graph(correlation_matrix, sigma_value=None):
     draw_rectangular_nodes(ax, pos)
     draw_edges(ax, pos, G)
     draw_edge_labels(ax, pos, G)
-    ax.set_title('Main graph (before filtering)')
+    ax.set_title('Main graph')
     ax.axis('off')
 
     if sigma_value:
@@ -132,15 +134,23 @@ def draw_graph(correlation_matrix, sigma_value=None):
         draw_rectangular_nodes(ax, pos_filtered)
         draw_edges(ax, pos_filtered, G_filtered)
         draw_edge_labels(ax, pos_filtered, G_filtered)
-        ax.set_title(f'Main graph (after filtering by sigma = {sigma_value:.2f})')
+        ax.set_title(f'Main graph filtered by sigma value')
         ax.axis('off')
 
         subgraphs = find_all_subgraphs(G_filtered)
         print(f"Found {len(subgraphs)} complete subgraphs")
 
+        method_text = f"Correlation method: {correlation_method}\nEncoding method: {encoding_method}\nSigma value: {sigma_value:.2f}"
+        edges_text = f"Edge styles:\n— Dashed: below sigma threshold\n— Solid: above sigma threshold"
+
+        fig.text(0.01, 0.95, edges_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+        fig.text(0.85, 0.95, method_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+        filename = f"Base_graph_{dataset_name}_{correlation_method}_{encoding_method}.png"
+        # plt.savefig(filename, dpi=1200)
+        print(f"Saved: {filename}")
         plt.show()
 
-        # Create a new figure for subgraphs
+
         subgraph_groups = {}
         for subgraph in subgraphs:
             size = len(subgraph.nodes())
@@ -148,25 +158,42 @@ def draw_graph(correlation_matrix, sigma_value=None):
                 subgraph_groups[size] = []
             subgraph_groups[size].append(subgraph)
 
-        for size, group in subgraph_groups.items():
-            if len(group) < 3:
-                fig_group, axes_group = plt.subplots(1, len(group), figsize=(10, 5), facecolor='white')
-            else:
-                fig_group, axes_group = plt.subplots(1, len(group), figsize=(15, 7), facecolor='white')
-            if len(group) == 1:
-                axes_group = [axes_group]  # Чтобы обеспечить итерабельность
-            for i, subgraph in enumerate(group):
-                pos_subgraph = nx.spring_layout(subgraph, seed=1, k=1, scale=1)
-                ax_subgraph = axes_group[i]
-                draw_rectangular_nodes(ax_subgraph, pos_subgraph)
-                draw_edges(ax_subgraph, pos_subgraph, subgraph)
-                draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
-                ax_subgraph.set_title(f'Subgraph {i + 1} ({size} nodes)')
-                ax_subgraph.axis('off')
+        # Максимальное количество колонок и рядов
+        max_cols = 4
+        max_rows = 4
+        max_graphs_per_fig = max_cols * max_rows
 
-            plt.suptitle(f'Subgraphs with {size} nodes', fontsize=14)
-            plt.tight_layout()
-            plt.show()
+        for size, group in subgraph_groups.items():
+            num_graphs = len(group)
+            for batch_idx in range(0, num_graphs, max_graphs_per_fig):
+                batch = group[batch_idx:batch_idx + max_graphs_per_fig]
+                batch_size = len(batch)
+
+                cols = min(max_cols, batch_size)
+                rows = math.ceil(batch_size / cols)
+
+                fig_group, axes_group = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3), facecolor='white')
+
+                axes_group = axes_group.flatten() if batch_size > 1 else [axes_group]
+
+                for i, subgraph in enumerate(batch):
+                    pos_subgraph = nx.circular_layout(subgraph)
+                    ax_subgraph = axes_group[i]
+                    draw_rectangular_nodes(ax_subgraph, pos_subgraph)
+                    draw_edges(ax_subgraph, pos_subgraph, subgraph)
+                    draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
+                    ax_subgraph.axis('off')
+
+                for j in range(batch_size, len(axes_group)):
+                    fig_group.delaxes(axes_group[j])
+
+                filename = f"{size}ptychs_{dataset_name}_{correlation_method}_{encoding_method}_part{batch_idx // max_graphs_per_fig + 1}.png"
+                plt.savefig(filename, dpi=1200)
+                print(f"Saved: {filename}")
+
+                plt.tight_layout()
+                plt.show()
+
 
 
 

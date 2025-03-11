@@ -1,25 +1,31 @@
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction import FeatureHasher
 from gensim.models import Word2Vec
-from lib.preprocessing import choose_alpha_value
 import numpy as np
 import pandas as pd
+import lib.utils as utils
 
 
 def calculate_correlation_with_label_encoding(data_frame, method: str):
     """Calculate correlation, including string attributes with Label Encoding."""
     print("Started Label Encoding correlation calculation...")
-    alpha = choose_alpha_value()
+    alpha = utils.choose_alpha_value()
     label_encoders = {}
     encoded_columns = []
+
+    new_data_frame = data_frame.copy()
+
     for name in data_frame.columns:
         if data_frame[name].dtype == 'object':
             label_encoder = LabelEncoder()
-            data_frame[name] = label_encoder.fit_transform(data_frame[name]) + 1
+            new_column_name = f"{name}_LE"  # Добавляем суффикс "_LE"
+            new_data_frame[new_column_name] = label_encoder.fit_transform(data_frame[name]) + 1
             label_encoders[name] = label_encoder
-            encoded_columns.append(name)
+            encoded_columns.append(new_column_name)
 
-    correlation_matrix = data_frame.corr(method=method)
+    new_data_frame.drop(columns=[name for name in data_frame.columns if data_frame[name].dtype == 'object'], inplace=True)
+
+    correlation_matrix = new_data_frame.corr(method=method)
     print("=======================================Correlation Matrix===================================================")
     print(correlation_matrix)
     print("============================================================================================================")
@@ -44,7 +50,7 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
                                            columns=correlation_matrix.columns)
     print("Finished Label Encoding correlation calculation.")
     print("Saving result to csv file...")
-    data_frame.to_csv("dataframe_LE.csv")
+    new_data_frame.to_csv("dataframe_LE.csv")
     print("Finished saving result to csv file...")
     return filtered_correlation_df, label_encoders, sigma
 
@@ -52,16 +58,22 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
 def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
     """Calculate correlation using Hashing Trick for categorical attributes."""
     print("Started Hashing correlation calculation...")
-    alpha = choose_alpha_value()
+    alpha = utils.choose_alpha_value()
     hasher = FeatureHasher(n_features=n_features, input_type="string")
     encoded_columns = []
+
+    new_data_frame = data_frame.copy()
+
     for name in data_frame.columns:
         if data_frame[name].dtype == 'object':
             hashed_values = hasher.transform(data_frame[name].astype(str).apply(lambda x: [x])).toarray().flatten()
-            data_frame[name] = hashed_values
-            encoded_columns.append(name)
+            new_column_name = f"{name}_HS"  # Добавляем суффикс "_HS"
+            new_data_frame[new_column_name] = hashed_values
+            encoded_columns.append(new_column_name)
 
-    correlation_matrix = data_frame.corr(method=method)
+    new_data_frame.drop(columns=[name for name in data_frame.columns if data_frame[name].dtype == 'object'], inplace=True)
+
+    correlation_matrix = new_data_frame.corr(method=method)
     print("=======================================Correlation Matrix===================================================")
     print(correlation_matrix)
     print("============================================================================================================")
@@ -87,7 +99,7 @@ def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
                                            columns=correlation_matrix.columns)
     print("Finished Hashing correlation calculation.")
     print("Saving result to csv file...")
-    data_frame.to_csv("dataframe_H.csv")
+    new_data_frame.to_csv("dataframe_HS.csv")
     print("Finished saving result to csv file...")
     return filtered_correlation_df, sigma
 
@@ -95,7 +107,7 @@ def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
 def calculate_correlation_with_word2vec(data_frame, method: str):
     """Calculate correlation using Word2Vec encoding for categorical attributes."""
     print("Starting Word2Vec correlation calculation.")
-    alpha = choose_alpha_value()
+    alpha = utils.choose_alpha_value()
     encoded_columns = []
     for name in data_frame.columns:
         if data_frame[name].dtype == 'object':
@@ -140,7 +152,7 @@ def calculate_correlation_with_word2vec(data_frame, method: str):
 
 def calculate_correlation_with_pseudo_glove(data_frame, method: str, vector_size=1):
     print("Started GloVe correlation calculation")
-    alpha = choose_alpha_value()
+    alpha = utils.choose_alpha_value()
     np.random.seed(42)
     encoded_columns = []
 
