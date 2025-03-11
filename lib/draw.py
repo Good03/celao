@@ -146,7 +146,7 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
         fig.text(0.01, 0.95, edges_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
         fig.text(0.85, 0.95, method_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
         filename = f"Base_graph_{dataset_name}_{correlation_method}_{encoding_method}.png"
-        # plt.savefig(filename, dpi=1200)
+        plt.savefig(filename, dpi=1200)
         print(f"Saved: {filename}")
         plt.show()
 
@@ -158,7 +158,6 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                 subgraph_groups[size] = []
             subgraph_groups[size].append(subgraph)
 
-        # Максимальное количество колонок и рядов
         max_cols = 4
         max_rows = 4
         max_graphs_per_fig = max_cols * max_rows
