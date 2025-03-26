@@ -139,23 +139,14 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
         ax.axis('off')
 
         subgraphs = find_all_subgraphs(G_filtered)
-        avg_correlation_values = []
         print(f"Found {len(subgraphs)} complete subgraphs")
 
         encoded_subgraphs_count = 0
         for subgraph in subgraphs:
             for node in subgraph.nodes():
                 if "_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS"):
-                    edge_weights = [abs(G_filtered[u][v]['weight']) for u, v in subgraph.edges()]
-                    if edge_weights:
-                        avg_correlation = sum(edge_weights) / len(edge_weights)
-                        avg_correlation_values.append(avg_correlation)
                     encoded_subgraphs_count += 1
                     break
-
-
-        power_of_encoded_nptychs_corr = sum(avg_correlation_values) / len(avg_correlation_values) if avg_correlation_values else 0
-        print(f"Overall average absolute correlation across subgraphs: {power_of_encoded_nptychs_corr:.4f}")
         print(f"Number of complete subgraphs containing linguistic attribute: {encoded_subgraphs_count}")
         method_text = f"Correlation method: {correlation_method}\nEncoding method: {encoding_method}\nSigma value: {sigma_value:.2f}"
         edges_text = f"Edge styles:\n— Dashed: below sigma threshold\n— Solid: above sigma threshold"
@@ -176,7 +167,7 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
 
         max_cols = 4
         max_rows = 4
-
+        avg_correlation_values = []
         max_graphs_per_fig = max_cols * max_rows
         for size, group in subgraph_groups.items():
             num_graphs = len(group)
@@ -193,14 +184,18 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                 axes_group = axes_group.flatten() if batch_size > 1 else [axes_group]
 
                 for i, subgraph in enumerate(batch):
-
+                    if any("_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS") for node in subgraph.nodes()):
+                        edge_weights = [abs(subgraph[u][v]['weight']) for u, v in subgraph.edges() if 'weight' in subgraph[u][v]]
+                        if edge_weights:
+                            avg_correlation = sum(edge_weights) / len(edge_weights)
+                            avg_correlation_values.append(avg_correlation)
                     pos_subgraph = nx.circular_layout(subgraph)
                     ax_subgraph = axes_group[i]
                     draw_rectangular_nodes(ax_subgraph, pos_subgraph)
                     draw_edges(ax_subgraph, pos_subgraph, subgraph)
                     draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
                     ax_subgraph.axis('off')
-
+                print(avg_correlation_values)
                 for j in range(batch_size, len(axes_group)):
                     fig_group.delaxes(axes_group[j])
 
@@ -210,6 +205,11 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
 
                 plt.tight_layout()
                 plt.show()
+        if avg_correlation_values:
+            overall_avg_correlation = sum(avg_correlation_values) / len(avg_correlation_values)
+            print(f"Overall average correlation: {overall_avg_correlation:.4f}")
+        else:
+            print("No subgraphs with weighted edges found.")
 
 
 
