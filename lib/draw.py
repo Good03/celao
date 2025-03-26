@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
 import matplotlib.cm as cm
+from numpy.lib.utils import source
 
 
 def draw_heatmap(correlation_matrix, sigma_value=None):
@@ -42,13 +43,11 @@ def draw_rectangular_nodes(ax, pos):
     """Draw rectangular nodes with custom colors from a colormap."""
     num_nodes = len(pos)
     cmap = cm.get_cmap('Pastel1', num_nodes)
-
     for i, (node, (x, y)) in enumerate(pos.items()):
         color = cmap(i)
         node_text = str(node)
         if " " in node_text or "_" in node_text:
             node_text = node_text.replace(" ", "\n").replace("_", "\n")
-
         ax.text(
             x, y, str(node_text),
             fontsize=10,
@@ -105,7 +104,6 @@ def find_all_subgraphs(G):
             # Check if the subgraph is a complete graph
             if subgraph.number_of_edges() == size * (size - 1) / 2:
                 subgraphs.append(subgraph)
-
     return subgraphs
 
 
@@ -141,8 +139,24 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
         ax.axis('off')
 
         subgraphs = find_all_subgraphs(G_filtered)
+        avg_correlation_values = []
         print(f"Found {len(subgraphs)} complete subgraphs")
 
+        encoded_subgraphs_count = 0
+        for subgraph in subgraphs:
+            for node in subgraph.nodes():
+                if "_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS"):
+                    edge_weights = [abs(G_filtered[u][v]['weight']) for u, v in subgraph.edges()]
+                    if edge_weights:
+                        avg_correlation = sum(edge_weights) / len(edge_weights)
+                        avg_correlation_values.append(avg_correlation)
+                    encoded_subgraphs_count += 1
+                    break
+
+
+        power_of_encoded_nptychs_corr = sum(avg_correlation_values) / len(avg_correlation_values) if avg_correlation_values else 0
+        print(f"Overall average absolute correlation across subgraphs: {power_of_encoded_nptychs_corr:.4f}")
+        print(f"Number of complete subgraphs containing linguistic attribute: {encoded_subgraphs_count}")
         method_text = f"Correlation method: {correlation_method}\nEncoding method: {encoding_method}\nSigma value: {sigma_value:.2f}"
         edges_text = f"Edge styles:\n— Dashed: below sigma threshold\n— Solid: above sigma threshold"
 
@@ -153,7 +167,6 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
         print(f"Saved: {filename}")
         plt.show()
 
-
         subgraph_groups = {}
         for subgraph in subgraphs:
             size = len(subgraph.nodes())
@@ -161,12 +174,13 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                 subgraph_groups[size] = []
             subgraph_groups[size].append(subgraph)
 
-
         max_cols = 4
         max_rows = 4
+
         max_graphs_per_fig = max_cols * max_rows
         for size, group in subgraph_groups.items():
             num_graphs = len(group)
+
             print(f"Total number of {size}-ptychs: {num_graphs}")
             for batch_idx in range(0, num_graphs, max_graphs_per_fig):
                 batch = group[batch_idx:batch_idx + max_graphs_per_fig]
