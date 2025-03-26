@@ -22,7 +22,8 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
             new_data_frame[new_column_name] = label_encoder.fit_transform(data_frame[name]) + 1
             label_encoders[name] = label_encoder
             encoded_columns.append(new_column_name)
-
+    encoded_colums_counter = len(encoded_columns)
+    print(f"Encoding columns quantity: {encoded_colums_counter}")
     new_data_frame.drop(columns=[name for name in data_frame.columns if data_frame[name].dtype == 'object'], inplace=True)
 
     correlation_matrix = new_data_frame.corr(method=method)
@@ -70,7 +71,8 @@ def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
             new_column_name = f"{name}_HS"  # Добавляем суффикс "_HS"
             new_data_frame[new_column_name] = hashed_values
             encoded_columns.append(new_column_name)
-
+    encoded_colums_counter = len(encoded_columns)
+    print(f"Encoding columns quantity: {encoded_colums_counter}")
     new_data_frame.drop(columns=[name for name in data_frame.columns if data_frame[name].dtype == 'object'], inplace=True)
 
     correlation_matrix = new_data_frame.corr(method=method)
@@ -119,7 +121,8 @@ def calculate_correlation_with_word2vec(data_frame, method: str):
             vector_df.columns = [f"{name}_vec_{i}" for i in range(1)]
             data_frame = pd.concat([data_frame.drop(columns=[name]), vector_df], axis=1)
             encoded_columns.append(name)
-
+    encoded_colums_counter = len(encoded_columns)
+    print(f"Encoding columns quantity: {encoded_colums_counter}")
     correlation_matrix = data_frame.corr(method=method)
     print("=======================================Correlation Matrix===================================================")
     print(correlation_matrix)
@@ -164,7 +167,8 @@ def calculate_correlation_with_pseudo_glove(data_frame, method: str, vector_size
             vector_df.columns = [f"{name}_vec_{i}" for i in range(vector_size)]
             data_frame = pd.concat([data_frame.drop(columns=[name]), vector_df], axis=1)
             encoded_columns.append(name)
-
+    encoded_colums_counter = len(encoded_columns)
+    print(f"Encoding columns quantity: {encoded_colums_counter}")
     correlation_matrix = data_frame.corr(method=method)
     print("=======================================Correlation Matrix===================================================")
     print(correlation_matrix)
