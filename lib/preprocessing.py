@@ -32,7 +32,7 @@ def run_application():
             selected_correlation_method = select_correlation_method()
             match selected_encoding_method:
                 case "Label Encoding":
-                    correlation_matrix, _, sigma, = calculate_correlation_with_label_encoding(dataset,
+                    correlation_matrix, _, sigma = calculate_correlation_with_label_encoding(dataset,
                                                                                               method=selected_correlation_method)
                 case "Hashing":
                     correlation_matrix, sigma = calculate_correlation_with_hashing(dataset,

@@ -41,11 +41,14 @@ def draw_plot(correlation_matrix):
 def draw_rectangular_nodes(ax, pos):
     """Draw rectangular nodes with custom colors from a colormap."""
     num_nodes = len(pos)
-    cmap = cm.get_cmap('Pastel1', num_nodes)  # Получаем цветовую карту Pastel1
+    cmap = cm.get_cmap('Pastel1', num_nodes)
 
     for i, (node, (x, y)) in enumerate(pos.items()):
         color = cmap(i)
-        node_text = str(node).replace(" ", "\n")# Выбираем цвет для текущей вершины
+        node_text = str(node)
+        if " " in node_text or "_" in node_text:
+            node_text = node_text.replace(" ", "\n").replace("_", "\n")
+
         ax.text(
             x, y, str(node_text),
             fontsize=10,
@@ -146,7 +149,7 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
         fig.text(0.01, 0.95, edges_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
         fig.text(0.85, 0.95, method_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
         filename = f"Base_graph_{dataset_name}_{correlation_method}_{encoding_method}.png"
-        plt.savefig(filename, dpi=1200)
+        # plt.savefig(filename, dpi=1200)
         print(f"Saved: {filename}")
         plt.show()
 
@@ -158,16 +161,16 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                 subgraph_groups[size] = []
             subgraph_groups[size].append(subgraph)
 
+
         max_cols = 4
         max_rows = 4
         max_graphs_per_fig = max_cols * max_rows
-
         for size, group in subgraph_groups.items():
             num_graphs = len(group)
+            print(f"Total number of {size}-ptychs: {num_graphs}")
             for batch_idx in range(0, num_graphs, max_graphs_per_fig):
                 batch = group[batch_idx:batch_idx + max_graphs_per_fig]
                 batch_size = len(batch)
-
                 cols = min(max_cols, batch_size)
                 rows = math.ceil(batch_size / cols)
 
@@ -176,6 +179,7 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                 axes_group = axes_group.flatten() if batch_size > 1 else [axes_group]
 
                 for i, subgraph in enumerate(batch):
+
                     pos_subgraph = nx.circular_layout(subgraph)
                     ax_subgraph = axes_group[i]
                     draw_rectangular_nodes(ax_subgraph, pos_subgraph)
@@ -187,12 +191,11 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                     fig_group.delaxes(axes_group[j])
 
                 filename = f"{size}ptychs_{dataset_name}_{correlation_method}_{encoding_method}_part{batch_idx // max_graphs_per_fig + 1}.png"
-                plt.savefig(filename, dpi=1200)
+                # plt.savefig(filename, dpi=1200)
                 print(f"Saved: {filename}")
 
                 plt.tight_layout()
                 plt.show()
-
 
 
 
