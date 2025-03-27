@@ -2,10 +2,10 @@ import itertools
 import math
 
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
 import networkx as nx
 import matplotlib.cm as cm
-from numpy.lib.utils import source
 
 
 def draw_heatmap(correlation_matrix, sigma_value=None):
@@ -187,7 +187,7 @@ def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, en
                     if any("_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS") for node in subgraph.nodes()):
                         edge_weights = [abs(subgraph[u][v]['weight']) for u, v in subgraph.edges() if 'weight' in subgraph[u][v]]
                         if edge_weights:
-                            avg_correlation = sum(edge_weights) / len(edge_weights)
+                            avg_correlation = np.mean(np.abs(edge_weights))
                             avg_correlation_values.append(avg_correlation)
                     pos_subgraph = nx.circular_layout(subgraph)
                     ax_subgraph = axes_group[i]
