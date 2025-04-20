@@ -1,9 +1,9 @@
 from sklearn.preprocessing import LabelEncoder
-from sklearn.feature_extraction import FeatureHasher
 from gensim.models import Word2Vec
 import numpy as np
 import pandas as pd
 import lib.utils as utils
+import hashlib
 
 
 def calculate_correlation_with_label_encoding(data_frame, method: str):
@@ -18,7 +18,7 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
     for name in data_frame.columns:
         if data_frame[name].dtype == 'object':
             label_encoder = LabelEncoder()
-            new_column_name = f"{name}_LE"  # Добавляем суффикс "_LE"
+            new_column_name = f"{name}_LE"
             new_data_frame[new_column_name] = label_encoder.fit_transform(data_frame[name]) + 1
             label_encoders[name] = label_encoder
             encoded_columns.append(new_column_name)
@@ -55,39 +55,47 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
     print("Finished saving result to csv file...")
     return filtered_correlation_df, label_encoders, sigma
 
+def simple_string_hash(value: str, n_buckets: int = 1000) -> int:
+    """Hash a string into an integer bucket using SHA256."""
+    return int(hashlib.sha256(value.encode()).hexdigest(), 16) % n_buckets
 
-def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
-    """Calculate correlation using Hashing Trick for categorical attributes."""
-    print("Started Hashing correlation calculation...")
+def calculate_correlation_with_hashing(data_frame: pd.DataFrame, method: str):
+    """Calculate correlation using manual hashing for categorical attributes."""
+    print("Started manual Hashing correlation calculation...")
+
     alpha = utils.choose_alpha_value()
-    hasher = FeatureHasher(n_features=n_features, input_type="string")
-    encoded_columns = []
+    n_buckets = 1000
 
     new_data_frame = data_frame.copy()
+    encoded_columns = []
 
     for name in data_frame.columns:
         if data_frame[name].dtype == 'object':
-            hashed_values = hasher.transform(data_frame[name].astype(str).apply(lambda x: [x])).toarray().flatten()
-            new_column_name = f"{name}_HS"  # Добавляем суффикс "_HS"
-            new_data_frame[new_column_name] = hashed_values
+            print(f"Hashing column: {name}")
+            new_column_name = f"{name}_HS"
+            new_data_frame[new_column_name] = data_frame[name].astype(str).apply(lambda x: simple_string_hash(x, n_buckets))
             encoded_columns.append(new_column_name)
-    encoded_colums_counter = len(encoded_columns)
-    print(f"Encoding columns quantity: {encoded_colums_counter}")
+
+    print(f"Encoded columns count: {len(encoded_columns)}")
+
     new_data_frame.drop(columns=[name for name in data_frame.columns if data_frame[name].dtype == 'object'], inplace=True)
 
     correlation_matrix = new_data_frame.corr(method=method)
-    print("=======================================Correlation Matrix===================================================")
+
+    print("======================================= Correlation Matrix ===============================================")
     print(correlation_matrix)
-    print("============================================================================================================")
-    print("=======================================Columns that were hashed=============================================")
+    print("==========================================================================================================")
+    print("======================================= Encoded columns ==================================================")
     print(encoded_columns)
-    print("============================================================================================================")
+    print("==========================================================================================================")
 
     correlation_matrix.fillna(0, inplace=True)
     sigma = correlation_matrix.values.std() + alpha
-    print("=======================================Sigma value==========================================================")
+
+    print("======================================= Sigma value ======================================================")
     print(sigma)
-    print("============================================================================================================")
+    print("==========================================================================================================")
+
     np.fill_diagonal(correlation_matrix.values, 0)
 
     filtered_correlation = np.where(
@@ -99,11 +107,14 @@ def calculate_correlation_with_hashing(data_frame, method: str, n_features=1):
     filtered_correlation_df = pd.DataFrame(filtered_correlation,
                                            index=correlation_matrix.index,
                                            columns=correlation_matrix.columns)
-    print("Finished Hashing correlation calculation.")
-    print("Saving result to csv file...")
-    new_data_frame.to_csv("dataframe_HS.csv")
-    print("Finished saving result to csv file...")
+
+    print("Finished manual Hashing correlation calculation.")
+    print("Saving result to CSV file...")
+    new_data_frame.to_csv("dataframe_HS.csv", index=False)
+    print("Finished saving result to CSV file.")
+
     return filtered_correlation_df, sigma
+
 
 
 def calculate_correlation_with_word2vec(data_frame, method: str):

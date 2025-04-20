@@ -76,7 +76,7 @@ def draw_edge_labels(ax, pos, G):
     edge_labels = {k: f"{v:.2f}" for k, v in edge_labels.items()}
     # Explicitly use the 'pos' for edge label placement
     nx.draw_networkx_edge_labels(
-        G, pos, edge_labels=edge_labels, font_color='black', label_pos=0.65, font_size=7,
+        G, pos, edge_labels=edge_labels, font_color='black', label_pos=0.65, font_size=11,
         bbox=dict(facecolor="white", ec="white"), ax=ax
     )
 
@@ -97,119 +97,163 @@ def find_all_subgraphs(G):
     nodes = list(G.nodes())
     subgraphs = []
 
-    # Check all subsets of nodes of size 3 or more
     for size in range(3, 7):
         for subset in itertools.combinations(nodes, size):
             subgraph = G.subgraph(subset)
-            # Check if the subgraph is a complete graph
             if subgraph.number_of_edges() == size * (size - 1) / 2:
                 subgraphs.append(subgraph)
     return subgraphs
 
 
+def is_encoded_node(node):
+    return "_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS")
+
+def is_encoded_subgraph(subgraph):
+    return any(is_encoded_node(node) for node in subgraph.nodes())
+
+def group_subgraphs_by_size(subgraphs):
+    grouped = {}
+    for sub in subgraphs:
+        grouped.setdefault(len(sub.nodes()), []).append(sub)
+    return grouped
+
+def draw_encoded_attribute_subgraphs(subgraphs, dataset_name, correlation_method, encoding_method):
+    """Draw all encoded subgraphs, separated by subgraph size."""
+    encoded_subgraphs = [
+        sg for sg in subgraphs
+        if any(is_encoded_node(node) for node in sg.nodes())
+    ]
+
+    if not encoded_subgraphs:
+        print("No subgraphs with encoded attributes found.")
+        return
+
+    print(f"Drawing {len(encoded_subgraphs)} subgraphs with encoded attributes")
+
+    subgraph_groups = {}
+    for sg in encoded_subgraphs:
+        size = len(sg.nodes())
+        if size not in subgraph_groups:
+            subgraph_groups[size] = []
+        subgraph_groups[size].append(sg)
+
+    max_cols = 3
+    max_graphs_per_fig = max_cols * max_cols  # 3x3 = 9
+
+    for size, group in subgraph_groups.items():
+        print(f"Drawing {len(group)} encoded subgraphs of size {size}")
+        for batch_idx in range(0, len(group), max_graphs_per_fig):
+            batch = group[batch_idx:batch_idx + max_graphs_per_fig]
+            batch_size = len(batch)
+            cols = min(max_cols, batch_size)
+            rows = math.ceil(batch_size / cols)
+
+            fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3), facecolor='white')
+            axes = axes.flatten() if batch_size > 1 else [axes]
+
+            for i, subgraph in enumerate(batch):
+                pos = nx.circular_layout(subgraph)
+                draw_rectangular_nodes(axes[i], pos)
+                draw_edges(axes[i], pos, subgraph)
+                draw_edge_labels(axes[i], pos, subgraph)
+                axes[i].axis('off')
+
+            for j in range(batch_size, len(axes)):
+                fig.delaxes(axes[j])
+
+            filename = f"EncodedSubgraphs_Size{size}_{dataset_name}_{correlation_method}_{encoding_method}_part{batch_idx // max_graphs_per_fig + 1}.png"
+            plt.tight_layout()
+            plt.savefig(filename, dpi=1200)
+            print(f"Saved: {filename}")
+            plt.show()
+
+
+
+def plot_subgraph_batch(batch, dataset_name, correlation_method, encoding_method, size, batch_idx, avg_correlation_values):
+    max_cols, max_graphs_per_fig = 3, 9
+    batch_size = len(batch)
+    cols = min(max_cols, batch_size)
+    rows = math.ceil(batch_size / cols)
+
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3), facecolor='white')
+    axes = axes.flatten() if batch_size > 1 else [axes]
+
+    for i, subgraph in enumerate(batch):
+        if is_encoded_subgraph(subgraph):
+            edge_weights = [abs(subgraph[u][v]['weight']) for u, v in subgraph.edges() if 'weight' in subgraph[u][v]]
+            if edge_weights:
+                avg_correlation_values.append(np.mean(edge_weights))
+        pos = nx.circular_layout(subgraph)
+        draw_rectangular_nodes(axes[i], pos)
+        draw_edges(axes[i], pos, subgraph)
+        draw_edge_labels(axes[i], pos, subgraph)
+        axes[i].axis('off')
+
+    for j in range(batch_size, len(axes)):
+        fig.delaxes(axes[j])
+
+    filename = f"{size}ptychs_{dataset_name}_{correlation_method}_{encoding_method}_part{batch_idx + 1}.png"
+    plt.tight_layout()
+    plt.savefig(filename, dpi=1200)
+    print(f"Saved: {filename}")
+    plt.show()
+
 def draw_graph(correlation_matrix, sigma_value=None, correlation_method=None, encoding_method=None, dataset_name=None):
     G = create_graph(correlation_matrix)
-
     print("Drawing main graph")
     print(f"Nodes in G: {G.nodes()}")
     print(f"Edges in G: {G.edges()}")
 
-    fig, axes = plt.subplots(1, 2, figsize=(20, 10), facecolor='white')
+    fig, axes = plt.subplots(2, 1, figsize=(12, 14), facecolor='white', )
+    draw_rectangular_nodes(axes[0], (pos := nx.circular_layout(G)))
+    draw_edges(axes[0], pos, G)
+    draw_edge_labels(axes[0], pos, G)
+    axes[0].set_title('Main graph')
+    axes[0].axis('off')
 
-    pos = nx.circular_layout(G)
-    ax = axes[0]
-    draw_rectangular_nodes(ax, pos)
-    draw_edges(ax, pos, G)
-    draw_edge_labels(ax, pos, G)
-    ax.set_title('Main graph')
-    ax.axis('off')
+    if not sigma_value:
+        return
 
-    if sigma_value:
-        G_filtered = create_graph(correlation_matrix, sigma_value)
-        print("Drawing filtered graph")
-        print(f"Nodes in G_filtered: {G_filtered.nodes()}")
-        print(f"Edges in G_filtered: {G_filtered.edges()}")
+    G_filtered = create_graph(correlation_matrix, sigma_value)
+    print("Drawing filtered graph")
+    print(f"Nodes in G_filtered: {G_filtered.nodes()}")
+    print(f"Edges in G_filtered: {G_filtered.edges()}")
 
-        pos_filtered = nx.circular_layout(G_filtered)
-        ax = axes[1]
-        draw_rectangular_nodes(ax, pos_filtered)
-        draw_edges(ax, pos_filtered, G_filtered)
-        draw_edge_labels(ax, pos_filtered, G_filtered)
-        ax.set_title(f'Main graph filtered by sigma value')
-        ax.axis('off')
+    draw_rectangular_nodes(axes[1], (pos_f := nx.circular_layout(G_filtered)))
+    draw_edges(axes[1], pos_f, G_filtered)
+    draw_edge_labels(axes[1], pos_f, G_filtered)
+    axes[1].set_title('Main graph filtered by sigma value')
+    axes[1].axis('off')
 
-        subgraphs = find_all_subgraphs(G_filtered)
-        print(f"Found {len(subgraphs)} complete subgraphs")
+    filename = f"Base_graph_{dataset_name}_{correlation_method}_{encoding_method}.png"
+    plt.savefig(filename, dpi=1200, bbox_inches='tight')
+    print(f"Saved: {filename}")
+    plt.tight_layout()
+    plt.show()
 
-        encoded_subgraphs_count = 0
-        for subgraph in subgraphs:
-            for node in subgraph.nodes():
-                if "_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS"):
-                    encoded_subgraphs_count += 1
-                    break
-        print(f"Number of complete subgraphs containing linguistic attribute: {encoded_subgraphs_count}")
-        method_text = f"Correlation method: {correlation_method}\nEncoding method: {encoding_method}\nSigma value: {sigma_value:.2f}"
-        edges_text = f"Edge styles:\n— Dashed: below sigma threshold\n— Solid: above sigma threshold"
+    subgraphs = find_all_subgraphs(G_filtered)
+    print(f"Found {len(subgraphs)} complete subgraphs")
+    draw_encoded_attribute_subgraphs(subgraphs, dataset_name, correlation_method, encoding_method)
 
-        fig.text(0.01, 0.95, edges_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
-        fig.text(0.85, 0.95, method_text, fontsize=12, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
-        filename = f"Base_graph_{dataset_name}_{correlation_method}_{encoding_method}.png"
-        # plt.savefig(filename, dpi=1200)
-        print(f"Saved: {filename}")
-        plt.show()
 
-        subgraph_groups = {}
-        for subgraph in subgraphs:
-            size = len(subgraph.nodes())
-            if size not in subgraph_groups:
-                subgraph_groups[size] = []
-            subgraph_groups[size].append(subgraph)
+    encoded_count = sum(1 for sg in subgraphs if is_encoded_subgraph(sg))
+    print(f"Number of complete subgraphs containing linguistic attribute: {encoded_count}")
 
-        max_cols = 4
-        max_rows = 4
-        avg_correlation_values = []
-        max_graphs_per_fig = max_cols * max_rows
-        for size, group in subgraph_groups.items():
-            num_graphs = len(group)
+    grouped_subgraphs = group_subgraphs_by_size(subgraphs)
+    avg_correlation_values = []
 
-            print(f"Total number of {size}-ptychs: {num_graphs}")
-            for batch_idx in range(0, num_graphs, max_graphs_per_fig):
-                batch = group[batch_idx:batch_idx + max_graphs_per_fig]
-                batch_size = len(batch)
-                cols = min(max_cols, batch_size)
-                rows = math.ceil(batch_size / cols)
+    for size, group in grouped_subgraphs.items():
+        print(f"Total number of {size}-ptychs: {len(group)}")
+        for batch_idx in range(0, len(group), 9):
+            batch = group[batch_idx:batch_idx + 9]
+            plot_subgraph_batch(batch, dataset_name, correlation_method, encoding_method, size, batch_idx // 9, avg_correlation_values)
 
-                fig_group, axes_group = plt.subplots(rows, cols, figsize=(cols * 3, rows * 3), facecolor='white')
+    if avg_correlation_values:
+        print(f"Overall average correlation: {np.mean(avg_correlation_values):.4f}")
+    else:
+        print("No subgraphs with weighted edges found.")
 
-                axes_group = axes_group.flatten() if batch_size > 1 else [axes_group]
 
-                for i, subgraph in enumerate(batch):
-                    if any("_vec_" in str(node) or str(node).endswith("_LE") or str(node).endswith("_HS") for node in subgraph.nodes()):
-                        edge_weights = [abs(subgraph[u][v]['weight']) for u, v in subgraph.edges() if 'weight' in subgraph[u][v]]
-                        if edge_weights:
-                            avg_correlation = np.mean(np.abs(edge_weights))
-                            avg_correlation_values.append(avg_correlation)
-                    pos_subgraph = nx.circular_layout(subgraph)
-                    ax_subgraph = axes_group[i]
-                    draw_rectangular_nodes(ax_subgraph, pos_subgraph)
-                    draw_edges(ax_subgraph, pos_subgraph, subgraph)
-                    draw_edge_labels(ax_subgraph, pos_subgraph, subgraph)
-                    ax_subgraph.axis('off')
-                print(avg_correlation_values)
-                for j in range(batch_size, len(axes_group)):
-                    fig_group.delaxes(axes_group[j])
-
-                filename = f"{size}ptychs_{dataset_name}_{correlation_method}_{encoding_method}_part{batch_idx // max_graphs_per_fig + 1}.png"
-                # plt.savefig(filename, dpi=1200)
-                print(f"Saved: {filename}")
-
-                plt.tight_layout()
-                plt.show()
-        if avg_correlation_values:
-            overall_avg_correlation = sum(avg_correlation_values) / len(avg_correlation_values)
-            print(f"Overall average correlation: {overall_avg_correlation:.4f}")
-        else:
-            print("No subgraphs with weighted edges found.")
 
 
 
