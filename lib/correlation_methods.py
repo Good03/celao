@@ -52,6 +52,7 @@ def calculate_correlation_with_label_encoding(data_frame, method: str):
     print("Finished Label Encoding correlation calculation.")
     print("Saving result to csv file...")
     new_data_frame.to_csv("dataframe_LE.csv")
+    correlation_matrix.to_csv("correlation_matrix_LE.csv")
     print("Finished saving result to csv file...")
     return filtered_correlation_df, label_encoders, sigma
 
@@ -111,6 +112,7 @@ def calculate_correlation_with_hashing(data_frame: pd.DataFrame, method: str):
     print("Finished manual Hashing correlation calculation.")
     print("Saving result to CSV file...")
     new_data_frame.to_csv("dataframe_HS.csv", index=False)
+    correlation_matrix.to_csv("correlation_matrix_HS.csv")
     print("Finished saving result to CSV file.")
 
     return filtered_correlation_df, sigma
@@ -160,6 +162,7 @@ def calculate_correlation_with_word2vec(data_frame, method: str):
     print("Finished Word2Vec correlation calculation.")
     print("Saving result to csv file...")
     data_frame.to_csv("dataframe_W2V.csv")
+    correlation_matrix.to_csv("correlation_matrix_W2V.csv")
     print("Finished saving result to csv file...")
     return filtered_correlation_df, sigma
 
@@ -205,5 +208,6 @@ def calculate_correlation_with_pseudo_glove(data_frame, method: str, vector_size
     print("Finished GloVe correlation calculation")
     print("Saving result to csv file...")
     data_frame.to_csv("dataframe_PG.csv")
+    correlation_matrix.to_csv("correlation_matrix_PG.csv")
     print("Finished saving result to csv file...")
     return filtered_correlation_df, sigma

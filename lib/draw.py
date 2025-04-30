@@ -138,7 +138,7 @@ def draw_encoded_attribute_subgraphs(subgraphs, dataset_name, correlation_method
         subgraph_groups[size].append(sg)
 
     max_cols = 3
-    max_graphs_per_fig = max_cols * max_cols  # 3x3 = 9
+    max_graphs_per_fig = max_cols * max_cols
 
     for size, group in subgraph_groups.items():
         print(f"Drawing {len(group)} encoded subgraphs of size {size}")

@@ -52,11 +52,9 @@ def select_encoding_method():
             print("Incorrect number. Try again.")
 def select_correlation_method():
     methods = ["Pearson","Spearman","Kendall"]
-
     print("Methods to choose:")
     for i, method in enumerate(methods):
         print(f"{i + 1}. {method}")
-
     while True:
         try:
             choice = int(input("Choose method of correlation computation: "))
