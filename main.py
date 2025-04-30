@@ -1,6 +1,4 @@
-from lib.preprocessing import run_application
+from celao import run_cela
 
-
-# Main part of the program
 if __name__ == '__main__':
-    run_application()
+    run_cela()
